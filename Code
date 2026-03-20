@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Городок | Курьерская служба</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Leaflet (карта) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0f3f8 0%, #e6ecf5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .app-container {
+            width: 1400px;
+            max-width: 100%;
+            height: 850px;
+            max-height: 95vh;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 48px 48px 32px 32px;
+            box-shadow: 0 30px 60px rgba(0,10,30,0.25), inset 0 1px 4px rgba(255,255,255,0.8);
+            display: flex;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.7);
+            position: relative;
+        }
+
+        /* САЙДБАР */
+        .sidebar {
+            width: 260px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(0,0,0,0.08);
+            padding: 32px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-shadow: 4px 0 12px rgba(0,0,0,0.02);
+        }
+
+        .logo-area {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2b3a67, #3e5a8a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding-left: 8px;
+            margin-bottom: 20px;
+            letter-spacing: -0.3px;
+        }
+
+        .profile-badge {
+            background: white;
+            border-radius: 40px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 6px 14px rgba(0,20,40,0.08);
+            border: 1px solid rgba(255,255,255,0.9);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .profile-badge:hover {
+            background: #f5f9ff;
+        }
+        .profile-icon {
+            width: 42px;
+            height: 42px;
+            background: #2b3a67;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        .profile-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .profile-info p {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 30px;
+            color: #1e293b;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,0.8);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .nav-link i {
+            font-size: 20px;
+            color: #2b3a67;
+        }
+        .nav-link:hover {
+            background: white;
+            border: 1px solid #2b3a67;
+        }
+
+        .help-link {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 30px;
+            color: #1e293b;
+            font-weight: 500;
+            border: 1px dashed #a0b8d4;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .help-link i {
+            font-size: 22px;
+            color: #2b3a67;
+        }
+        .help-link:hover {
+            background: white;
+            border: 1px solid #2b3a67;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 28px 32px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .screen { display: none; animation: fade 0.25s ease; }
+        .screen.active { display: block; }
+
+        @keyframes fade {
+            from { opacity: 0.4; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 20px 0;
+        }
+        .product-card, .order-card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.1);
+            flex: 1 1 180px;
+            border: 1px solid rgba(255,255,255,0.7);
+            transition: 0.15s;
+            cursor: pointer;
+        }
+        .product-card:hover {
+            transform: scale(1.01);
+            background: #fcfdff;
+        }
+
+        button {
+            background: #2b3a67;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 10px 18px -8px #1e2f4a70;
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid rgba(255,255,255,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button.secondary {
+            background: white;
+            color: #1e293b;
+            box-shadow: none;
+            border: 1px solid #cbd5e1;
+        }
+        button.small {
+            padding: 8px 18px;
+            font-size: 13px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 40px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 15px;
+            margin: 8px 0;
+            outline: none;
+            transition: 0.2s;
+        }
+        .input-field:focus {
+            border-color: #2b3a67;
+            box-shadow: 0 0 0 3px rgba(43,58,103,0.2);
+        }
+
+        #courier-map {
+            height: 320px;
+            width: 100%;
+            border-radius: 32px;
+            margin: 20px 0;
+            border: 3px solid white;
+            box-shadow: 0 15px 25px -8px #0000001a;
+            z-index: 1;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: white;
+            max-width: 450px;
+            width: 90%;
+            border-radius: 48px;
+            padding: 30px;
+            box-shadow: 0 30px 60px #0b1a2f50;
+        }
+
+        .stars {
+            display: flex;
+            gap: 10px;
+            font-size: 32px;
+            color: #f1c40f;
+            cursor: pointer;
+        }
+
+        .badge {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-radius: 60px;
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        hr { margin: 20px 0; border: 1px solid #eef2f6; }
+        .row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; }
+        .text-small { font-size: 13px; color: #475569; }
+        .clickable { color: #2b3a67; font-weight: 500; text-decoration: underline dotted; cursor: pointer; }
+
+        .cart-badge {
+            background: #2b3a67;
+            color: white;
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container" id="appContainer">
+
+    <!-- САЙДБАР -->
+    <div class="sidebar">
+        <div class="logo-area">
+            <i class="fas fa-bicycle" style="margin-right: 8px;"></i> Городок
+        </div>
+
+        <div class="profile-badge" id="profileBtn">
+            <div class="profile-icon" id="profileIcon">👤</div>
+            <div class="profile-info" id="profileInfo">
+                <h4>Гость</h4>
+                <p>не авторизован</p>
+            </div>
+        </div>
+
+        <!-- Кнопка "Мой заказ" для клиента (всегда видна) -->
+        <div class="nav-link" id="clientOrderBtn">
+            <i class="fas fa-shopping-bag"></i> Мой заказ
+        </div>
+
+        <!-- Кнопка "Заказы" для курьера -->
+        <div class="nav-link" id="courierOrdersBtn" style="display: none;">
+            <i class="fas fa-list"></i> Заказы
+        </div>
+
+        <!-- Справка курьера -->
+        <div class="help-link" id="courierHelpBtn" style="display: none;">
+            <i class="fas fa-life-ring"></i> Справка курьера
+        </div>
+
+        <div style="flex:1;"></div>
+        <!-- поддержка всегда видна -->
+        <div class="help-link" id="supportDummy" style="border: none; opacity: 0.7;">
+            <i class="fas fa-headset"></i> Служба поддержки 24/7
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div class="main-content" id="mainContent">
+
+        <!-- ЭКРАН АВТОРИЗАЦИИ -->
+        <div class="screen active" id="loginScreen">
+            <h1 style="font-size: 32px; margin-bottom: 10px;">Добро пожаловать ✨</h1>
+            <p style="color: #334155; margin-bottom: 30px;">Войдите или зарегистрируйтесь, чтобы продолжить</p>
+
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 260px;">
+                    <h3>Вход</h3>
+                    <input type="text" class="input-field" id="loginUsername" placeholder="Логин">
+                    <input type="password" class="input-field" id="loginPassword" placeholder="Пароль">
+                    <div style="margin: 15px 0;">
+                        <label style="margin-right: 20px;"><input type="radio" name="loginRole" value="client" checked> Клиент</label>
+                        <label><input type="radio" name="loginRole" value="courier"> Курьер</label>
+                    </div>
+                    <button id="loginBtn"><i class="fas fa-sign-in-alt"></i> Войти</button>
+                    <p class="text-small clickable" id="showRegister" style="margin-top: 15px;">Нет аккаунта? Зарегистрироваться</p>
+                </div>
+
+                <div style="width: 1px; background: #cbd5e1;"></div>
+
+                <div style="flex: 1; min-width: 260px;" id="registerBlock">
+                    <h3>Регистрация</h3>
+                    <input type="text" class="input-field" id="regUsername" placeholder="Логин">
+                    <input type="password" class="input-field" id="regPassword" placeholder="Пароль">
+                    <input type="tel" class="input-field" id="regPhone" placeholder="Номер телефона">
+                    <div style="margin: 15px 0;">
+                        <label style="margin-right: 20px;"><input type="radio" name="regRole" value="client" checked> Клиент</label>
+                        <label><input type="radio" name="regRole" value="courier"> Курьер</label>
+                    </div>
+                    <button id="registerBtn" class="secondary"><i class="fas fa-user-plus"></i> Зарегистрироваться</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭКРАН КЛИЕНТА: ВЫБОР ТОВАРОВ -->
+        <div class="screen" id="clientProductsScreen">
+            <h2>Составьте заказ <span class="cart-badge" id="cartCount">0</span></h2>
+            <div class="card-grid" id="productsList"></div>
+            <div style="margin-top: 30px;">
+                <button id="goToCheckout" class="secondary">Перейти к оформлению</button>
+            </div>
+        </div>
+
+        <!-- ЭКРАН КЛИЕНТА: АДРЕС -->
+        <div class="screen" id="clientAddressScreen">
+            <h2>Адрес доставки</h2>
+            <input type="text" class="input-field" id="deliveryAddress" placeholder="Улица, дом, квартира" value="ул. Курчатова, 15, Красноярск">
+            <textarea class="input-field" id="deliveryComment" placeholder="Комментарий к заказу (домофон, этаж)" rows="2"></textarea>
+            <button id="confirmOrderBtn">Подтвердить заказ</button>
+            <button class="secondary" id="backToProducts">Назад к товарам</button>
+        </div>
+
+        <!-- ЭКРАН КЛИЕНТА: ОТСЛЕЖИВАНИЕ -->
+        <div class="screen" id="clientTrackingScreen">
+            <h2>Ваш заказ принят 🚀</h2>
+            <div style="background: white; border-radius: 40px; padding: 20px; margin: 15px 0;">
+                <div class="row"><span>Номер заказа:</span> <strong id="orderNumber">#001</strong></div>
+                <div class="row"><span>Статус:</span> <span id="orderStatus">Ищем курьера</span></div>
+                <div class="row"><span>Прошло времени:</span> <span id="orderTimer">0 мин</span></div>
+                <div class="row"><span>Курьер:</span> <span id="courierPhone">не назначен</span></div>
+                <div class="row"><span>Поддержка:</span> <span>+7 (800) 555-35-35</span></div>
+                <hr>
+                <p class="clickable" id="cancelOrderInfoLink">❗ Информация по отмене заказа</p>
+                <button class="secondary small" id="cancelOrderBtn">Отменить заказ</button>
+            </div>
+            <div id="deliveryRatingBlock" style="display: none; background: #f8fafc; border-radius: 40px; padding: 20px;">
+                <h3>Оцените доставку</h3>
+                <div class="stars" id="ratingStars">
+                    <i class="far fa-star" data-star="1"></i><i class="far fa-star" data-star="2"></i><i class="far fa-star" data-star="3"></i><i class="far fa-star" data-star="4"></i><i class="far fa-star" data-star="5"></i>
+                </div>
+                <textarea class="input-field" placeholder="Комментарий к доставке" id="deliveryFeedback"></textarea>
+                <button id="tipBtn" class="small">➕ Чаевые 50₽</button>
+                <button id="submitRatingBtn">Отправить оценку</button>
+            </div>
+        </div>
+
+        <!-- ЭКРАН КУРЬЕРА: ВЫБОР ГРАФИКА / ЗАКАЗЫ -->
+        <div class="screen" id="courierOrdersScreen">
+            <h2>Доступные заказы</h2>
+            <div style="background: #fff3e6; border-radius: 30px; padding: 16px; margin-bottom: 20px;">
+                <p><i class="fas fa-calendar-alt"></i> Мой график: <strong id="courierSchedule">не выбран</strong></p>
+                <button class="small secondary" id="changeScheduleBtn">Сменить график</button>
+            </div>
+            <div id="ordersContainer" style="display: none;">
+                <div class="card-grid" id="availableOrdersList"></div>
+            </div>
+            <div id="noScheduleMessage">Выберите график, чтобы увидеть заказы</div>
+            <h3>Активный заказ</h3>
+            <div id="activeOrderBlock" style="background: #e6f7e6; border-radius: 30px; padding: 20px;">
+                <p>Нет активного заказа</p>
+            </div>
+        </div>
+
+        <!-- ЭКРАН КУРЬЕРА: ВЫПОЛНЕНИЕ ЗАКАЗА (КАРТА) -->
+        <div class="screen" id="courierActiveScreen">
+            <h2 id="activeOrderHeader">Заказ #<span id="activeOrderId">123</span></h2>
+            <div id="courier-map" style="height: 300px;"></div>
+            <div style="background: white; border-radius: 30px; padding: 20px; margin: 15px 0;">
+                <p><strong>Клиент:</strong> <span id="clientPhone"></span></p>
+                <p><strong>Комментарий:</strong> <span id="orderComment"></span></p>
+                <p><strong>Состав:</strong> <span id="orderItems"></span></p>
+                <p><strong>Поддержка:</strong> +7 (800) 555-35-35</p>
+                <p><strong>Расстояние до цели:</strong> <span id="distanceToTarget">0</span> км</p>
+                <div id="courierButtons">
+                    <button id="actionBtn">✅ Прибыл к пункту</button>
+                    <button class="secondary" id="courierCancelBtn">Отмена заказа</button>
+                </div>
+                <p class="clickable" id="courierCancelInfo">по каким причинам отменяется заказ?</p>
+                <div id="deliverySummary" style="display: none; background: #e0f2fe; border-radius: 20px; padding: 15px; margin-top: 15px;">
+                    <p>Время доставки: <span id="deliveryTimeSpan">0</span> мин</p>
+                    <p>Оплата: <span id="deliveryPay">200</span> ₽</p>
+                    <button id="finishDeliveryBtn">Завершить и выйти на заказы</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭКРАН ПРОФИЛЯ -->
+        <div class="screen" id="profileScreen">
+            <h2>Профиль</h2>
+            <div style="background: white; border-radius: 40px; padding: 20px;">
+                <p><strong>Логин:</strong> <span id="profileUsername">user</span></p>
+                <p><strong>Телефон:</strong> <span id="profilePhone"></span></p>
+                <p><strong>Роль:</strong> <span id="profileRole"></span></p>
+                <p><strong>Рейтинг (кур.)</strong> <span id="profileRating">—</span></p>
+                <hr>
+                <h4>История заказов</h4>
+                <div id="profileHistory"></div>
+                <button id="logoutBtn" class="secondary" style="margin-top: 20px;">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+    <div class="modal-overlay" id="cancelInfoModal">
+        <div class="modal">
+            <h3>Информация по отмене заказа</h3>
+            <p style="margin:15px 0"><strong>Возврат денег, если:</strong></p>
+            <ul style="list-style-type: disc; padding-left: 20px;">
+                <li>Заказ доставляется больше часа (свыше 60 мин).</li>
+                <li>Вы отменили заказ в течение 10 минут после оформления.</li>
+                <li>В заказе отсутствуют позиции или они повреждены — полная компенсация.</li>
+                <li>Курьер не вышел на связь в течение 15 мин после начала доставки.</li>
+            </ul>
+            <p class="text-small">По правилам сервисов доставки: при опоздании > 60 мин — возврат 100%. При отмене до 10 мин — полный возврат. Порча/недокомплект — возврат или повторная доставка.</p>
+            <button class="small secondary" onclick="this.closest('.modal-overlay').style.display='none'">Закрыть</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="courierHelpModal">
+        <div class="modal">
+            <h3>Справка курьера</h3>
+            <p><i class="fas fa-check-circle" style="color:#2b3a67;"></i> Если клиент не открывает дверь — позвонить, ждать 5 мин, затем связаться с поддержкой.</p>
+            <p><i class="fas fa-check-circle" style="color:#2b3a67;"></i> При повреждении товара — сделать фото, сообщить в поддержку, клиент получит компенсацию.</p>
+            <p><i class="fas fa-check-circle" style="color:#2b3a67;"></i> Опоздание более 15 мин — предупредить клиента через поддержку.</p>
+            <p><i class="fas fa-exclamation-triangle" style="color:#b45309;"></i> Не передавайте заказ посторонним, только лично в руки.</p>
+            <p><i class="fas fa-phone-alt"></i> Поддержка: +7 (800) 555-35-35 (круглосуточно)</p>
+            <button class="small secondary" onclick="document.getElementById('courierHelpModal').style.display='none'">Понятно</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="courierCancelReasonModal">
+        <div class="modal">
+            <h3>Правила отмены для курьера</h3>
+            <p>Если клиент не отвечает более 10 мин, товар повреждён, ресторан закрыт — отмена через поддержку. В иных случаях выполни заказ. Компенсация при отмене не по вине курьера — 50% от ставки.</p>
+            <button class="small secondary" onclick="this.closest('.modal-overlay').style.display='none'">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛ ВЫБОРА ГРАФИКА -->
+    <div class="modal-overlay" id="scheduleModal">
+        <div class="modal">
+            <h3>Выберите график на сегодня</h3>
+            <select id="scheduleSelect" class="input-field">
+                <option value="10-14">10:00 – 14:00</option>
+                <option value="14-18">14:00 – 18:00</option>
+                <option value="18-22">18:00 – 22:00</option>
+            </select>
+            <button id="saveScheduleBtn">Сохранить</button>
+            <button class="secondary" onclick="document.getElementById('scheduleModal').style.display='none'">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- СОСТОЯНИЕ ----------
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        let nextOrderId = 1000;
+
+        // Список реальных магазинов в районе ул. Курчатова
+        const shops = [
+            { name: 'Пятёрочка (Курчатова 10)', coords: [56.0110, 92.8550] },
+            { name: 'Магнит (Курчатова 20)', coords: [56.0118, 92.8530] },
+            { name: 'Красный Яр (Курчатова 5)', coords: [56.0105, 92.8560] },
+            { name: 'Аллея (Курчатова 25)', coords: [56.0120, 92.8520] },
+            { name: 'Командор (Курчатова 30)', coords: [56.0125, 92.8510] }
+        ];
+
+        // Товары (без привязки к магазину)
+        const productsCatalog = [
+            { id: 1, name: '🍞 Хлеб', price: 35 },
+            { id: 2, name: '🥛 Молоко', price: 80 },
+            { id: 3, name: '🍎 Яблоки', price: 120 },
+            { id: 4, name: '🍫 Шоколад', price: 90 },
+            { id: 5, name: '🍕 Пицца', price: 450 },
+            { id: 6, name: '🍣 Суши', price: 600 }
+        ];
+
+        let cart = []; // для текущего клиента
+
+        // График курьера
+        let courierSchedule = localStorage.getItem('courierSchedule') || null;
+
+        // Таймер для клиента
+        let timerInterval = null;
+
+        // Переменные для карты
+        let courierMap = null;
+        let courierMarker = null;
+        let destinationMarker = null;
+        let currentOrderForCourier = null;
+        let courierStep = 'pickup'; // pickup, delivery, completed
+        let watchId = null;
+        let usingSimulation = false;
+        let lastPosition = null;
+
+        // ---------- Функции сохранения ----------
+        function saveUsers() { localStorage.setItem('users', JSON.stringify(users)); }
+        function saveOrders() { localStorage.setItem('orders', JSON.stringify(orders)); }
+        function saveCurrentUser() { localStorage.setItem('currentUser', JSON.stringify(currentUser)); }
+
+        // ---------- Рендеринг ----------
+        function showScreen(screenId) {
+            if (timerInterval && document.getElementById('clientTrackingScreen').classList.contains('active')) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function updateSidebar() {
+            const profileIcon = document.getElementById('profileIcon');
+            const profileInfo = document.getElementById('profileInfo');
+            const courierHelpBtn = document.getElementById('courierHelpBtn');
+            const courierOrdersBtn = document.getElementById('courierOrdersBtn');
+            const clientOrderBtn = document.getElementById('clientOrderBtn');
+            if (currentUser) {
+                profileIcon.innerText = currentUser.role === 'courier' ? '👤📦' : '👤';
+                profileInfo.innerHTML = `<h4>${currentUser.username}</h4><p>${currentUser.role === 'courier' ? 'Курьер' : 'Клиент'}</p>`;
+                courierHelpBtn.style.display = currentUser.role === 'courier' ? 'flex' : 'none';
+                courierOrdersBtn.style.display = currentUser.role === 'courier' ? 'flex' : 'none';
+                // Кнопка "Мой заказ" видна всегда для клиента, для курьера скрыта
+                clientOrderBtn.style.display = currentUser.role === 'client' ? 'flex' : 'none';
+            } else {
+                profileIcon.innerText = '👤';
+                profileInfo.innerHTML = '<h4>Гость</h4><p>не авторизован</p>';
+                courierHelpBtn.style.display = 'none';
+                courierOrdersBtn.style.display = 'none';
+                clientOrderBtn.style.display = 'none';
+            }
+        }
+
+        // ---------- АВТОРИЗАЦИЯ ----------
+        document.getElementById('registerBtn').addEventListener('click', () => {
+            const username = document.getElementById('regUsername').value.trim();
+            const pwd = document.getElementById('regPassword').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const role = document.querySelector('input[name="regRole"]:checked').value;
+            if (!username || !pwd || !phone) { alert('Заполните все поля'); return; }
+            if (users.find(u => u.username === username)) { alert('Логин занят'); return; }
+            const newUser = { username, password: pwd, phone, role, rating: role==='courier'?5.0:null, history: [] };
+            users.push(newUser);
+            saveUsers();
+            alert('Регистрация успешна, войдите');
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const username = document.getElementById('loginUsername').value.trim();
+            const pwd = document.getElementById('loginPassword').value.trim();
+            const role = document.querySelector('input[name="loginRole"]:checked').value;
+            if (!username || !pwd) { alert('Введите логин и пароль'); return; }
+            const user = users.find(u => u.username === username && u.password === pwd && u.role === role);
+            if (user) {
+                currentUser = user;
+                saveCurrentUser();
+                updateSidebar();
+                if (role === 'client') {
+                    showScreen('clientProductsScreen');
+                    renderProducts();
+                } else {
+                    showScreen('courierOrdersScreen');
+                    renderCourierScreen();
+                }
+            } else {
+                alert('Неверные данные');
+            }
+        });
+
+        document.getElementById('showRegister').addEventListener('click', () => {
+            document.getElementById('regUsername').focus();
+        });
+
+        // Кнопка "Мой заказ" для клиента
+        document.getElementById('clientOrderBtn').addEventListener('click', () => {
+            if (!currentUser || currentUser.role !== 'client') return;
+            // Ищем активный заказ (pending или active)
+            const activeOrder = orders.find(o => o.clientId === currentUser.username && (o.status === 'pending' || o.status === 'active'));
+            if (activeOrder) {
+                // Переходим на отслеживание
+                document.getElementById('orderNumber').innerText = '#' + activeOrder.id;
+                document.getElementById('orderStatus').innerText = activeOrder.status === 'pending' ? 'Ищем курьера' : 'В пути';
+                document.getElementById('courierPhone').innerText = activeOrder.courierId ? '+7 (999) 123-45-67' : 'не назначен';
+                startTimer(activeOrder.createdAt);
+                showScreen('clientTrackingScreen');
+            } else {
+                // Нет активного заказа — переходим к оформлению нового
+                showScreen('clientProductsScreen');
+            }
+        });
+
+        // Кнопка "Заказы" для курьера
+        document.getElementById('courierOrdersBtn').addEventListener('click', () => {
+            if (currentUser && currentUser.role === 'courier') {
+                showScreen('courierOrdersScreen');
+                renderCourierScreen();
+            }
+        });
+
+        // ---------- КЛИЕНТ: ТОВАРЫ ----------
+        function renderProducts() {
+            const container = document.getElementById('productsList');
+            container.innerHTML = '';
+            productsCatalog.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'product-card';
+                div.innerHTML = `<strong>${p.name}</strong><br>${p.price} ₽<br><button class="small add-to-cart" data-id="${p.id}">Добавить</button>`;
+                div.querySelector('.add-to-cart').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addToCart(p);
+                });
+                container.appendChild(div);
+            });
+            updateCartCount();
+        }
+
+        function addToCart(product) {
+            cart.push(product);
+            updateCartCount();
+            alert(`${product.name} добавлен в корзину`);
+        }
+
+        function updateCartCount() {
+            document.getElementById('cartCount').innerText = cart.length;
+        }
+
+        document.getElementById('goToCheckout').addEventListener('click', () => {
+            if (cart.length === 0) { alert('Корзина пуста'); return; }
+            showScreen('clientAddressScreen');
+        });
+
+        document.getElementById('backToProducts').addEventListener('click', () => showScreen('clientProductsScreen'));
+
+        // ПОДТВЕРЖДЕНИЕ ЗАКАЗА КЛИЕНТОМ
+        document.getElementById('confirmOrderBtn').addEventListener('click', () => {
+            if (!currentUser) { alert('Нет авторизации'); return; }
+            const address = document.getElementById('deliveryAddress').value.trim();
+            if (!address) { alert('Введите адрес'); return; }
+            const comment = document.getElementById('deliveryComment').value;
+            const items = cart.map(p => p.name).join(', ');
+            const deliveryCoords = [56.0112, 92.8540]; // ул. Курчатова, 15
+            const newOrder = {
+                id: nextOrderId++,
+                clientId: currentUser.username,
+                items: items,
+                address: address,
+                comment: comment,
+                status: 'pending',
+                courierId: null,
+                createdAt: Date.now(),
+                phone: currentUser.phone,
+                deliveryCoords: deliveryCoords,
+            };
+            orders.push(newOrder);
+            saveOrders();
+            cart = [];
+            updateSidebar(); // чтобы кнопка "Мой заказ" осталась видимой (она и так видна)
+            showTrackingForOrder(newOrder.id);
+        });
+
+        function showTrackingForOrder(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+            document.getElementById('orderNumber').innerText = '#' + order.id;
+            document.getElementById('orderStatus').innerText = order.status === 'pending' ? 'Ищем курьера' : 'В пути';
+            document.getElementById('courierPhone').innerText = order.courierId ? '+7 (999) 123-45-67' : 'не назначен';
+            startTimer(order.createdAt);
+            showScreen('clientTrackingScreen');
+        }
+
+        function startTimer(createdAt) {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const diff = Math.floor((Date.now() - createdAt) / 60000);
+                document.getElementById('orderTimer').innerText = diff + ' мин';
+            }, 1000);
+        }
+
+        document.getElementById('cancelOrderInfoLink').addEventListener('click', () => {
+            document.getElementById('cancelInfoModal').style.display = 'flex';
+        });
+
+        document.getElementById('cancelOrderBtn').addEventListener('click', () => {
+            if (confirm('Отменить заказ?')) {
+                // Находим активный заказ клиента и меняем статус на cancelled
+                const activeOrder = orders.find(o => o.clientId === currentUser.username && (o.status === 'pending' || o.status === 'active'));
+                if (activeOrder) {
+                    activeOrder.status = 'cancelled';
+                    saveOrders();
+                }
+                alert('Заказ отменён. Деньги вернутся по правилам (см. информацию)');
+                showScreen('clientProductsScreen');
+            }
+        });
+
+        // ---------- КУРЬЕР ----------
+        function renderCourierScreen() {
+            const schedule = localStorage.getItem('courierSchedule');
+            document.getElementById('courierSchedule').innerText = schedule ? schedule.replace('-',' – ') : 'не выбран';
+            if (schedule) {
+                document.getElementById('ordersContainer').style.display = 'block';
+                document.getElementById('noScheduleMessage').style.display = 'none';
+                renderAvailableOrders();
+            } else {
+                document.getElementById('ordersContainer').style.display = 'none';
+                document.getElementById('noScheduleMessage').style.display = 'block';
+            }
+        }
+
+        document.getElementById('changeScheduleBtn').addEventListener('click', () => {
+            const modal = document.getElementById('scheduleModal');
+            const select = document.getElementById('scheduleSelect');
+            const now = new Date().getHours();
+            Array.from(select.options).forEach(opt => {
+                const val = opt.value;
+                let start = parseInt(val.split('-')[0]);
+                if (start < now) {
+                    opt.disabled = true;
+                    opt.textContent += ' (недоступно)';
+                } else {
+                    opt.disabled = false;
+                }
+            });
+            modal.style.display = 'flex';
+        });
+
+        document.getElementById('saveScheduleBtn').addEventListener('click', () => {
+            const select = document.getElementById('scheduleSelect');
+            const selected = select.value;
+            localStorage.setItem('courierSchedule', selected);
+            document.getElementById('courierSchedule').innerText = selected.replace('-',' – ');
+            document.getElementById('scheduleModal').style.display = 'none';
+            renderCourierScreen();
+        });
+
+        function renderAvailableOrders() {
+            const container = document.getElementById('availableOrdersList');
+            container.innerHTML = '';
+            const pending = orders.filter(o => o.status === 'pending' && !o.courierId);
+            if (pending.length===0) { container.innerHTML = '<p>Нет свободных заказов</p>'; return; }
+            pending.forEach(o => {
+                const div = document.createElement('div');
+                div.className = 'order-card';
+                div.innerHTML = `<strong>Заказ #${o.id}</strong><br>📍 ${o.address}<br>🛒 ${o.items.substring(0,20)}...<br><button class="small take-order" data-id="${o.id}">Взять</button>`;
+                div.querySelector('.take-order').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    takeOrder(o.id);
+                });
+                container.appendChild(div);
+            });
+        }
+
+        function takeOrder(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+
+            function getCourierPosition(callback) {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        pos => callback([pos.coords.latitude, pos.coords.longitude]),
+                        err => {
+                            console.warn('Геолокация не доступна, используем центр района');
+                            callback([56.0115, 92.8545]); // центр
+                        }
+                    );
+                } else {
+                    callback([56.0115, 92.8545]);
+                }
+            }
+
+            getCourierPosition(courierPos => {
+                // Находим ближайший магазин
+                let minDist = Infinity;
+                let bestShop = shops[0];
+                shops.forEach(shop => {
+                    const dist = Math.sqrt((shop.coords[0] - courierPos[0])**2 + (shop.coords[1] - courierPos[1])**2) * 111000; // грубо в метры
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestShop = shop;
+                    }
+                });
+                order.pickupPoint = bestShop.name;
+                order.pickupCoords = bestShop.coords;
+                order.courierId = currentUser.username;
+                order.status = 'active';
+                saveOrders();
+                currentOrderForCourier = order;
+                courierStep = 'pickup';
+                showScreen('courierActiveScreen');
+                initMapForOrder(order, courierPos);
+            });
+        }
+
+        // ---------- КАРТА (Leaflet) ----------
+        function initMapForOrder(order, initialPos) {
+            setTimeout(() => {
+                if (courierMap) courierMap.remove();
+                courierMap = L.map('courier-map').setView(initialPos, 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(courierMap);
+
+                function getTargetCoords() {
+                    return courierStep === 'pickup' ? order.pickupCoords : order.deliveryCoords;
+                }
+
+                destinationMarker = L.marker(getTargetCoords(), {title: 'Цель'}).addTo(courierMap);
+
+                if (navigator.geolocation) {
+                    usingSimulation = false;
+                    watchId = navigator.geolocation.watchPosition(pos => {
+                        const latlng = [pos.coords.latitude, pos.coords.longitude];
+                        if (courierMarker) {
+                            courierMarker.setLatLng(latlng);
+                        } else {
+                            // Иконка с направлением (стрелка)
+                            const customIcon = L.divIcon({
+                                html: '<i class="fas fa-location-arrow" style="font-size: 24px; color: #2b3a67; transform: rotate(0deg);"></i>',
+                                iconSize: [24, 24],
+                                className: 'courier-marker'
+                            });
+                            courierMarker = L.marker(latlng, {icon: customIcon}).addTo(courierMap);
+                        }
+                        // Поворачиваем иконку по направлению движения (упрощённо)
+                        if (lastPosition) {
+                            const angle = calculateBearing(lastPosition, latlng);
+                            courierMarker._icon.style.transform += ` rotate(${angle}deg)`;
+                        }
+                        lastPosition = latlng;
+
+                        const target = getTargetCoords();
+                        destinationMarker.setLatLng(target);
+                        if (courierMap._line) courierMap.removeLayer(courierMap._line);
+                        courierMap._line = L.polyline([latlng, target], {color:'#2b3a67'}).addTo(courierMap);
+                        const distance = L.latLng(latlng).distanceTo(L.latLng(target)) / 1000;
+                        document.getElementById('distanceToTarget').innerText = distance.toFixed(2);
+                        courierMap.fitBounds([latlng, target]);
+                    }, err => {
+                        alert('Ошибка геолокации, используем симуляцию');
+                        useSimulatedLocation(order, getTargetCoords, initialPos);
+                    }, {enableHighAccuracy:true});
+                } else {
+                    useSimulatedLocation(order, getTargetCoords, initialPos);
+                }
+
+                document.getElementById('activeOrderId').innerText = order.id;
+                document.getElementById('clientPhone').innerText = order.phone || '+7 (999) 111-22-33';
+                document.getElementById('orderComment').innerText = order.comment || '—';
+                document.getElementById('orderItems').innerText = order.items || '—';
+                document.getElementById('actionBtn').innerText = '✅ Прибыл к пункту';
+            }, 200);
+        }
+
+        function useSimulatedLocation(order, targetCoordsFn, initialPos) {
+            usingSimulation = true;
+            courierMarker = L.marker(initialPos, {title: 'Вы (симуляция)'}).addTo(courierMap);
+            const target = targetCoordsFn();
+            destinationMarker = L.marker(target).addTo(courierMap);
+            courierMap._line = L.polyline([initialPos, target], {color:'#2b3a67'}).addTo(courierMap);
+            const distance = L.latLng(initialPos).distanceTo(L.latLng(target)) / 1000;
+            document.getElementById('distanceToTarget').innerText = distance.toFixed(2);
+            courierMap.fitBounds([initialPos, target]);
+        }
+
+        function calculateBearing(start, end) {
+            const lat1 = start[0] * Math.PI/180, lon1 = start[1] * Math.PI/180;
+            const lat2 = end[0] * Math.PI/180, lon2 = end[1] * Math.PI/180;
+            const dLon = lon2 - lon1;
+            const y = Math.sin(dLon) * Math.cos(lat2);
+            const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+            let brng = Math.atan2(y, x) * 180/Math.PI;
+            return (brng + 360) % 360;
+        }
+
+        function updateMapTargetForStep() {
+            if (!currentOrderForCourier || !courierMap) return;
+            const target = courierStep === 'pickup' ? currentOrderForCourier.pickupCoords : currentOrderForCourier.deliveryCoords;
+            if (destinationMarker) destinationMarker.setLatLng(target);
+            if (courierMarker) {
+                const pos = courierMarker.getLatLng();
+                if (courierMap._line) courierMap.removeLayer(courierMap._line);
+                courierMap._line = L.polyline([pos, target], {color:'#2b3a67'}).addTo(courierMap);
+                const distance = L.latLng(pos).distanceTo(L.latLng(target)) / 1000;
+                document.getElementById('distanceToTarget').innerText = distance.toFixed(2);
+                courierMap.fitBounds([pos, target]);
+            }
+        }
+
+        document.getElementById('actionBtn').addEventListener('click', () => {
+            if (!currentOrderForCourier) return;
+            if (courierStep === 'pickup') {
+                courierStep = 'delivery';
+                document.getElementById('actionBtn').innerText = '✅ Заказ доставлен';
+                if (usingSimulation) updateMapTargetForStep();
+            } else if (courierStep === 'delivery') {
+                courierStep = 'completed';
+                document.getElementById('actionBtn').style.display = 'none';
+                document.getElementById('courierCancelBtn').style.display = 'none';
+                document.getElementById('deliverySummary').style.display = 'block';
+                const timeTaken = Math.floor((Date.now() - currentOrderForCourier.createdAt) / 60000) || 1;
+                document.getElementById('deliveryTimeSpan').innerText = timeTaken;
+                document.getElementById('deliveryPay').innerText = 200 + (timeTaken > 30 ? 50 : 0);
+            }
+        });
+
+        document.getElementById('finishDeliveryBtn').addEventListener('click', () => {
+            if (currentOrderForCourier) {
+                currentOrderForCourier.status = 'delivered';
+                saveOrders();
+            }
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            showScreen('courierOrdersScreen');
+            renderCourierScreen();
+        });
+
+        document.getElementById('courierCancelBtn').addEventListener('click', () => {
+            if (confirm('Отменить заказ?')) {
+                alert('Заказ отменен. Свяжитесь с поддержкой.');
+                showScreen('courierOrdersScreen');
+            }
+        });
+
+        document.getElementById('courierCancelInfo').addEventListener('click', () => {
+            document.getElementById('courierCancelReasonModal').style.display = 'flex';
+        });
+
+        // ---------- ПРОФИЛЬ ----------
+        document.getElementById('profileBtn').addEventListener('click', () => {
+            if (!currentUser) { alert('Сначала войдите'); showScreen('loginScreen'); return; }
+            document.getElementById('profileUsername').innerText = currentUser.username;
+            document.getElementById('profilePhone').innerText = currentUser.phone;
+            document.getElementById('profileRole').innerText = currentUser.role === 'courier' ? 'Курьер' : 'Клиент';
+            document.getElementById('profileRating').innerText = currentUser.rating ? currentUser.rating.toFixed(1) : '—';
+            const historyDiv = document.getElementById('profileHistory');
+            historyDiv.innerHTML = '';
+            const userOrders = orders.filter(o => o.clientId === currentUser.username || (currentUser.role==='courier' && o.courierId===currentUser.username));
+            if (userOrders.length===0) historyDiv.innerHTML = '<p class="text-small">Нет заказов</p>';
+            else userOrders.forEach(o => { historyDiv.innerHTML += `<p>#${o.id} — ${o.status}</p>`; });
+            showScreen('profileScreen');
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateSidebar();
+            showScreen('loginScreen');
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        });
+
+        document.getElementById('courierHelpBtn').addEventListener('click', () => {
+            document.getElementById('courierHelpModal').style.display = 'flex';
+        });
+
+        document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', (e) => {
+            if (e.target === m) m.style.display = 'none';
+        }));
+
+        // Инициализация
+        updateSidebar();
+        if (currentUser) {
+            if (currentUser.role === 'client') {
+                showScreen('clientProductsScreen');
+                renderProducts();
+            } else {
+                showScreen('courierOrdersScreen');
+                renderCourierScreen();
+            }
+        }
+    })();
+</script>
+</body>
+</html>
